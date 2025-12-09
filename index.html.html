@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<title>2D Blok Koyma Oyunu</title>
+<style>
+  body {
+    margin: 0;
+    background-color: #87ceeb;
+    user-select: none;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  canvas {
+    border: 2px solid #333;
+    background-color: #a2d149;
+  }
+  #inventory {
+    margin-top: 10px;
+    display: flex;
+    gap: 5px;
+  }
+  .block-slot {
+    width: 40px;
+    height: 40px;
+    border: 2px solid #000;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-weight: bold;
+    cursor: pointer;
+  }
+  #buttons {
+    margin-top: 10px;
+    display: flex;
+    gap: 10px;
+  }
+</style>
+</head>
+<body>
+<canvas id="gameCanvas" width="1400" height="900"></canvas>
+<div id="inventory">
+  <div class="block-slot" data-type="1" style="background-color:#a0522d">1</div>
+  <div class="block-slot" data-type="2" style="background-color:#808080">2</div>
+  <div class="block-slot" data-type="3" style="background-color:#00ffff">3</div>
+  <div class="block-slot" data-type="4" style="background-color:#b0b0b0">4</div>
+  <div class="block-slot" data-type="5" style="background-color:#deb887">5</div>
+  <div class="block-slot" data-type="6" style="background-color:#ffd700">6</div>
+</div>
+<div id="buttons">
+  <button id="saveBtn">Kaydet</button>
+  <button id="loadBtn">Yükle</button>
+</div>
+<script>
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+const BLOCK_SIZE = 40;
+let blocks = [];
+let currentBlock = 1;
+let isMouseDown = false;
+
+const blockColors = {
+    1: '#a0522d', 2: '#808080', 3: '#00ffff', 4: '#b0b0b0', 5: '#deb887', 6: '#ffd700'
+};
+
+// Kar parçacıkları
+let snowflakes = [];
+for(let i=0;i<200;i++){
+    snowflakes.push({x:Math.random()*canvas.width, y:Math.random()*canvas.height, r:Math.random()*3+1, speed: Math.random()*1+0.5});
+}
+
+function drawSnow(){
+    for(let s of snowflakes){
+        ctx.fillStyle = '#fff';
+        ctx.beginPath();
+        ctx.arc(s.x, s.y, s.r, 0, Math.PI*2);
+        ctx.fill();
+        s.y += s.speed;
+        if(s.y>canvas.height){ s.y=0; s.x=Math.random()*canvas.width; }
+    }
+}
+
+// Blok çizme
+function drawBlocks(){
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    for(let block of blocks){
+        ctx.fillStyle = blockColors[block.type];
+        ctx.fillRect(block.x, block.y, BLOCK_SIZE, BLOCK_SIZE);
+        ctx.strokeStyle='#000';
+        ctx.strokeRect(block.x, block.y, BLOCK_SIZE, BLOCK_SIZE);
+    }
+    drawSnow();
+}
+
+// Blok ekle/sil
+function placeBlock(x,y){ if(!blocks.some(b=>b.x===x&&b.y===y)){ blocks.push({x,y,type:currentBlock}); drawBlocks(); } }
+function removeBlock(x,y){ let i=blocks.findIndex(b=>b.x===x&&b.y===y); if(i!==-1){ blocks.splice(i,1); drawBlocks(); } }
+
+canvas.addEventListener('mousedown', function(e){
+    isMouseDown=true;
+    const rect=canvas.getBoundingClientRect();
+    const x=Math.floor((e.clientX-rect.left)/BLOCK_SIZE)*BLOCK_SIZE;
+    const y=Math.floor((e.clientY-rect.top)/BLOCK_SIZE)*BLOCK_SIZE;
+    if(e.button===0) placeBlock(x,y);
+    else if(e.button===2) removeBlock(x,y);
+});
+canvas.addEventListener('mouseup', ()=>{isMouseDown=false;});
+canvas.addEventListener('mousemove', function(e){
+    if(isMouseDown){
+        const rect=canvas.getBoundingClientRect();
+        const x=Math.floor((e.clientX-rect.left)/BLOCK_SIZE)*BLOCK_SIZE;
+        const y=Math.floor((e.clientY-rect.top)/BLOCK_SIZE)*BLOCK_SIZE;
+        if(e.buttons===1) placeBlock(x,y);
+        else if(e.buttons===2) removeBlock(x,y);
+    }
+});
+canvas.addEventListener('contextmenu', e=>e.preventDefault());
+
+// Envanter
+document.querySelectorAll('.block-slot').forEach(slot=>{
+    slot.addEventListener('click',()=>{ currentBlock=parseInt(slot.dataset.type); });
+});
+
+// Kaydet / Yükle
+document.getElementById('saveBtn').addEventListener('click',()=>{
+    localStorage.setItem('blocks', JSON.stringify(blocks));
+    alert('Dünya kaydedildi!');
+});
+
+document.getElementById('loadBtn').addEventListener('click',()=>{
+    const data=localStorage.getItem('blocks');
+    if(data){ blocks=JSON.parse(data); drawBlocks(); alert('Dünya yüklendi!'); }
+});
+
+function animate(){
+    drawBlocks();
+    requestAnimationFrame(animate);
+}
+animate();
+</script>
+</body>
+</html>
